@@ -33,18 +33,11 @@
 #include "MapInstanced.h"
 #include "Util.h"
 
-Group::Group()
+Group::Group() : m_Id(0), m_leaderGuid(0), m_mainTank(0), m_mainAssistant(0),  m_groupType(GROUPTYPE_NORMAL),
+    m_dungeonDifficulty(REGULAR_DIFFICULTY), m_raidDifficulty(REGULAR_DIFFICULTY),
+    m_bgGroup(NULL), m_lootMethod(FREE_FOR_ALL), m_looterGuid(0), m_lootThreshold(ITEM_QUALITY_UNCOMMON), 
+    m_subGroupsCounts(NULL)
 {
-    m_leaderGuid        = 0;
-    m_mainTank          = 0;
-    m_mainAssistant     = 0;
-    m_groupType         = (GroupType)0;
-    m_bgGroup           = NULL;
-    m_lootMethod        = (LootMethod)0;
-    m_looterGuid        = 0;
-    m_lootThreshold     = ITEM_QUALITY_UNCOMMON;
-    m_subGroupsCounts   = NULL;
-
     for (int i = 0; i < TARGETICONCOUNT; ++i)
         m_targetIcons[i] = 0;
 }
@@ -123,7 +116,10 @@ bool Group::Create(const uint64 &guid, const char * name)
         return false;
 
     if(!isBGGroup())
+    {
         CharacterDatabase.CommitTransaction();
+        m_Id = sObjectMgr.GenerateGroupId();
+    }
 
     return true;
 }
@@ -194,6 +190,7 @@ bool Group::LoadGroupFromDB(const uint64 &leaderGuid, QueryResult *result, bool 
             return false;
     }
 
+    m_Id = sObjectMgr.GenerateGroupId();
     return true;
 }
 
@@ -616,7 +613,7 @@ void Group::GroupLoot(const uint64& playerGUID, Loot *loot, Creature *creature)
 
             loot->items[itemSlot].is_blocked = true;
             creature->m_groupLootTimer = 60000;
-            creature->lootingGroupLeaderGUID = GetLeaderGUID();
+            creature->m_groupLootId = GetId();
 
             RollId.push_back(r);
         }
@@ -843,7 +840,7 @@ void Group::CountTheRoll(Rolls::iterator rollI, uint32 NumberOfPlayers)
             uint8 maxresul = 0;
             uint64 maxguid = (*roll->playerVote.begin()).first;
             Player *player;
-            RollVote rollvote;
+            RollVote rollvote = PASS;                       //Fixed: Using uninitialized memory 'rollvote'
 
             Roll::PlayerVote::iterator itr;
             for (itr = roll->playerVote.begin(); itr != roll->playerVote.end(); ++itr)
@@ -908,23 +905,24 @@ void Group::CountTheRoll(Rolls::iterator rollI, uint32 NumberOfPlayers)
     delete roll;
 }
 
-void Group::SetTargetIcon(uint8 id, uint64 guid)
+void Group::SetTargetIcon(uint8 id, uint64 whoGuid, uint64 targetGuid)
 {
     if(id >= TARGETICONCOUNT)
         return;
 
     // clean other icons
-    if( guid != 0 )
+    if( targetGuid != 0 )
         for(int i = 0; i < TARGETICONCOUNT; ++i)
-            if( m_targetIcons[i] == guid )
-                SetTargetIcon(i, 0);
+            if( m_targetIcons[i] == targetGuid )
+                SetTargetIcon(i, 0, 0);
 
-    m_targetIcons[id] = guid;
+    m_targetIcons[id] = targetGuid;
 
-    WorldPacket data(MSG_RAID_TARGET_UPDATE, (2+8));
-    data << uint8(0);
+    WorldPacket data(MSG_RAID_TARGET_UPDATE, (1+8+1+8));
+    data << uint8(0);                                       // set targets
+    data << uint64(whoGuid);
     data << uint8(id);
-    data << uint64(guid);
+    data << uint64(targetGuid);
     BroadcastPacket(&data, true);
 }
 
@@ -957,7 +955,7 @@ void Group::SendTargetIconList(WorldSession *session)
         return;
 
     WorldPacket data(MSG_RAID_TARGET_UPDATE, (1+TARGETICONCOUNT*9));
-    data << (uint8)1;
+    data << uint8(1);                                       // list targets
 
     for(int i = 0; i < TARGETICONCOUNT; ++i)
     {
@@ -1250,6 +1248,8 @@ void Group::_setLeader(const uint64 &guid)
         CharacterDatabase.PExecute("UPDATE group_member SET leaderGuid='%u' WHERE leaderGuid='%u'", GUID_LOPART(slot->guid), GUID_LOPART(m_leaderGuid));
         CharacterDatabase.CommitTransaction();
     }
+
+    uint32 old_guidlow = GUID_LOPART(m_leaderGuid);
 
     m_leaderGuid = slot->guid;
     m_leaderName = slot->name;

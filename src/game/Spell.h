@@ -304,6 +304,7 @@ class Spell
         void EffectPlayerPull(uint32 i);
         void EffectDispelMechanic(uint32 i);
         void EffectSummonDeadPet(uint32 i);
+        void EffectSummonAllTotems(uint32 i);
         void EffectDestroyAllTotems(uint32 i);
         void EffectDurabilityDamage(uint32 i);
         void EffectSkill(uint32 i);
@@ -337,7 +338,6 @@ class Spell
         void cast(bool skipCheck = false);
         void finish(bool ok = true);
         void TakePower();
-        void TakeRunePower();
         void TakeReagents();
         void TakeCastItem();
 
@@ -354,7 +354,7 @@ class Spell
         SpellCastResult CheckItems();
         SpellCastResult CheckRange(bool strict);
         SpellCastResult CheckPower();
-        SpellCastResult CheckRuneCost(uint32 runeCostID);
+        SpellCastResult CheckOrTakeRunePower(bool take);
         SpellCastResult CheckCasterAuras() const;
 
         int32 CalculateDamage(uint8 i, Unit* target) { return m_caster->CalculateSpellDamage(m_spellInfo,i,m_currentBasePoints[i],target); }
@@ -431,12 +431,19 @@ class Spell
         void SetDelayStart(uint64 m_time) { m_delayStart = m_time; }
         uint64 GetDelayMoment() const { return m_delayMoment; }
 
-        bool IsNeedSendToClient() const;
+        bool IsNeedSendToClient() const;                    // use for hide spell cast for client in case when cast not have client side affect (animation or log entries)
+        bool IsTriggeredSpellWithRedundentData() const;     // use for ignore some spell data for triggered spells like cast time, some triggered spells have redundent copy data from main spell for client use purpose
 
         CurrentSpellTypes GetCurrentContainer();
 
+        // caster types:
+        // formal spell caster, in game source of spell affects cast
         Unit* GetCaster() const { return m_caster; }
-        Unit* GetOriginalCaster() const { return m_originalCaster; }
+        // real source of cast affects, explcit caster, or DoT/HoT applier, or GO owner, etc. Can be NULL
+        Unit* GetAffectiveCaster() const { return m_originalCasterGUID ? m_originalCaster : m_caster; }
+        // m_originalCasterGUID can store GO guid, and in this case this is visual caster
+        WorldObject* GetCastingObject() const;
+
         int32 GetPowerCost() const { return m_powerCost; }
 
         void UpdatePointers();                              // must be used at call Spell code after time delay (non triggered spell cast/update spell call/etc)
@@ -456,6 +463,8 @@ class Spell
     protected:
 
         void SendLoot(uint64 guid, LootType loottype);
+        bool IgnoreItemRequirements() const;                        // some item use spells have unexpected reagent data
+        void UpdateOriginalCasterPointer();
 
         Unit* m_caster;
 
@@ -609,7 +618,7 @@ namespace MaNGOS
         SpellNotifierPlayer(Spell &spell, std::list<Unit*> &data, const uint32 &i, float radius)
             : i_data(data), i_spell(spell), i_index(i), i_radius(radius)
         {
-            i_originalCaster = i_spell.GetOriginalCaster();
+            i_originalCaster = i_spell.GetAffectiveCaster();
         }
 
         void Visit(PlayerMapType &m)
@@ -646,7 +655,7 @@ namespace MaNGOS
             SpellTargets TargetType = SPELL_TARGETS_NOT_FRIENDLY)
             : i_data(&data), i_spell(spell), i_push_type(type), i_radius(radius), i_TargetType(TargetType)
         {
-            i_originalCaster = spell.GetOriginalCaster();
+            i_originalCaster = spell.GetAffectiveCaster();
         }
 
         template<class T> inline void Visit(GridRefManager<T>  &m)

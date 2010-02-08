@@ -473,7 +473,7 @@ bool ChatHandler::HandleGameObjectTargetCommand(const char* args)
         o =       fields[5].GetFloat();
         mapid =   fields[6].GetUInt16();
         pool_id = sPoolMgr.IsPartOfAPool<GameObject>(lowguid);
-        if (!pool_id || (pool_id && sPoolMgr.IsSpawnedObject<GameObject>(pool_id, lowguid)))
+        if (!pool_id || sPoolMgr.IsSpawnedObject<GameObject>(lowguid))
             found = true;
     } while( result->NextRow() && (!found) );
 
@@ -1275,7 +1275,7 @@ bool ChatHandler::HandleNpcChangeLevelCommand(const char* args)
     {
         if(((Pet*)pCreature)->getPetType()==HUNTER_PET)
         {
-            pCreature->SetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP, sObjectMgr.GetXPForLevel(lvl)/4);
+            pCreature->SetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP, sObjectMgr.GetXPForPetLevel(lvl));
             pCreature->SetUInt32Value(UNIT_FIELD_PETEXPERIENCE, 0);
         }
         ((Pet*)pCreature)->GivePetLevel(lvl);
@@ -1745,15 +1745,15 @@ bool ChatHandler::HandleNpcUnFollowCommand(const char* /*args*/)
     }
 
     if (creature->GetMotionMaster()->empty() ||
-        creature->GetMotionMaster()->GetCurrentMovementGeneratorType ()!=TARGETED_MOTION_TYPE)
+        creature->GetMotionMaster()->GetCurrentMovementGeneratorType ()!=FOLLOW_MOTION_TYPE)
     {
         PSendSysMessage(LANG_CREATURE_NOT_FOLLOW_YOU);
         SetSentErrorMessage(true);
         return false;
     }
 
-    TargetedMovementGenerator<Creature> const* mgen
-        = static_cast<TargetedMovementGenerator<Creature> const*>((creature->GetMotionMaster()->top()));
+    FollowMovementGenerator<Creature> const* mgen
+        = static_cast<FollowMovementGenerator<Creature> const*>((creature->GetMotionMaster()->top()));
 
     if(mgen->GetTarget()!=player)
     {
@@ -2159,7 +2159,7 @@ bool ChatHandler::HandlePInfoCommand(const char* args)
 
     std::string username = GetMangosString(LANG_ERROR);
     std::string last_ip = GetMangosString(LANG_ERROR);
-    uint32 security = 0;
+    AccountTypes security = SEC_PLAYER;
     std::string last_login = GetMangosString(LANG_ERROR);
 
     QueryResult* result = loginDatabase.PQuery("SELECT username,gmlevel,last_ip,last_login FROM account WHERE id = '%u'",accId);
@@ -2167,7 +2167,7 @@ bool ChatHandler::HandlePInfoCommand(const char* args)
     {
         Field* fields = result->Fetch();
         username = fields[0].GetCppString();
-        security = fields[1].GetUInt32();
+        security = (AccountTypes)fields[1].GetUInt32();
 
         if(!m_session || m_session->GetSecurity() >= security)
         {
@@ -3681,7 +3681,7 @@ bool ChatHandler::HandleHonorAddCommand(const char* args)
     if (HasLowerSecurity(target, 0))
         return false;
 
-    uint32 amount = (uint32)atoi(args);
+    float amount = (float)atof(args);
     target->RewardHonor(NULL, 1, amount);
     return true;
 }

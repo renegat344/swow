@@ -709,6 +709,12 @@ bool Item::IsEquipped() const
 
 bool Item::CanBeTraded(bool mail) const
 {
+    if (m_lootGenerated)
+        return false;
+
+    if(!mail && IsBoundAccountWide()) // Dirty hack, because trade window is closing
+        return false;
+
     if ((!mail || !IsBoundAccountWide()) && IsSoulBound())
         return false;
 
@@ -751,6 +757,10 @@ bool Item::IsBoundByEnchant() const
 bool Item::IsFitToSpellRequirements(SpellEntry const* spellInfo) const
 {
     ItemPrototype const* proto = GetProto();
+
+    //Lava Lash
+    if (spellInfo->Id==60103 && spellInfo->EquippedItemClass==ITEM_CLASS_WEAPON)
+         return true;
 
     if (spellInfo->EquippedItemClass != -1)                 // -1 == any item class
     {
@@ -1015,6 +1025,23 @@ void Item::BuildUpdateData(UpdateDataMapType& update_players)
         BuildUpdateDataForPlayer(pl, update_players);
 
     ClearUpdateMask(false);
+}
+
+uint8 Item::CanBeMergedPartlyWith( ItemPrototype const* proto ) const
+{
+    // check item type
+    if (GetEntry() != proto->ItemId)
+        return EQUIP_ERR_ITEM_CANT_STACK;
+
+    // check free space (full stacks can't be target of merge
+    if (GetCount() >= proto->GetMaxStackSize())
+        return EQUIP_ERR_ITEM_CANT_STACK;
+
+    // not allow merge looting currently items
+    if (m_lootGenerated)
+        return EQUIP_ERR_ALREADY_LOOTED;
+
+    return EQUIP_ERR_OK;
 }
 
 bool ItemRequiredTarget::IsFitToRequirements( Unit* pUnitTarget ) const

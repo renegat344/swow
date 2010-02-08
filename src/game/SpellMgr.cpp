@@ -62,20 +62,24 @@ int32 GetSpellMaxDuration(SpellEntry const *spellInfo)
 
 uint32 GetSpellCastTime(SpellEntry const* spellInfo, Spell const* spell)
 {
+    // some triggered spells have data only usable for client
+    if (spell && spell->IsTriggeredSpellWithRedundentData())
+        return 0;
+
     SpellCastTimesEntry const *spellCastTimeEntry = sSpellCastTimesStore.LookupEntry(spellInfo->CastingTimeIndex);
 
     // not all spells have cast time index and this is all is pasiive abilities
-    if(!spellCastTimeEntry)
+    if (!spellCastTimeEntry)
         return 0;
 
     int32 castTime = spellCastTimeEntry->CastTime;
 
     if (spell)
     {
-        if(Player* modOwner = spell->GetCaster()->GetSpellModOwner())
+        if (Player* modOwner = spell->GetCaster()->GetSpellModOwner())
             modOwner->ApplySpellMod(spellInfo->Id, SPELLMOD_CASTING_TIME, castTime, spell);
 
-        if( !(spellInfo->Attributes & (SPELL_ATTR_UNK4|SPELL_ATTR_TRADESPELL)) )
+        if (!(spellInfo->Attributes & (SPELL_ATTR_UNK4|SPELL_ATTR_TRADESPELL)))
             castTime = int32(castTime * spell->GetCaster()->GetFloatValue(UNIT_MOD_CAST_SPEED));
         else
         {
@@ -84,7 +88,7 @@ uint32 GetSpellCastTime(SpellEntry const* spellInfo, Spell const* spell)
         }
     }
 
-    if (spellInfo->Attributes & SPELL_ATTR_RANGED && (!spell || !(spell->IsAutoRepeat())))
+    if (spellInfo->Attributes & SPELL_ATTR_RANGED && (!spell || !spell->IsAutoRepeat()))
         castTime += 500;
 
     return (castTime > 0) ? uint32(castTime) : 0;
@@ -278,9 +282,6 @@ SpellSpecific GetSpellSpecific(uint32 spellId)
             if( spellInfo->SpellFamilyFlags & UI64LIT(0x0044000000380000) || spellInfo->SpellFamilyFlags2 & 0x00001010)
                 return SPELL_ASPECT;
 
-            if( spellInfo->SpellFamilyFlags2 & 0x00000002 )
-                return SPELL_TRACKER;
-
             break;
         }
         case SPELLFAMILY_PALADIN:
@@ -320,6 +321,10 @@ SpellSpecific GetSpellSpecific(uint32 spellId)
                 return SPELL_PRESENCE;
             break;
     }
+
+    // Tracking spells
+    if(IsSpellHaveAura(spellInfo, SPELL_AURA_TRACK_CREATURES) || IsSpellHaveAura(spellInfo, SPELL_AURA_TRACK_RESOURCES))
+        return SPELL_TRACKER;
 
     // elixirs can have different families, but potion most ofc.
     if(SpellSpecific sp = sSpellMgr.GetSpellElixirSpecific(spellInfo->Id))
@@ -590,8 +595,9 @@ bool IsPositiveEffect(uint32 spellId, uint32 effIndex)
                     break;
                 case SPELL_AURA_MOD_DECREASE_SPEED:         // used in positive spells also
                     // part of positive spell if casted at self
-                    if (spellproto->EffectImplicitTargetA[effIndex] == TARGET_SELF ||
-                        spellproto->EffectImplicitTargetA[effIndex] == TARGET_SELF2)
+                    if ((spellproto->EffectImplicitTargetA[effIndex] == TARGET_SELF ||
+                        spellproto->EffectImplicitTargetA[effIndex] == TARGET_SELF2) &&
+                        spellproto->SpellFamilyName == SPELLFAMILY_GENERIC)
                         return false;
                     // but not this if this first effect (don't found batter check)
                     if(spellproto->Attributes & 0x4000000 && effIndex==0)
@@ -1296,6 +1302,7 @@ bool SpellMgr::canStackSpellRanks(SpellEntry const *spellInfo)
                 if (spellInfo->Effect[i]==SPELL_EFFECT_APPLY_AURA &&
                     spellInfo->EffectApplyAuraName[i] == SPELL_AURA_MOD_SHAPESHIFT)
                     return false;
+                break;
         }
     }
     return true;
@@ -1355,6 +1362,10 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
 
                     // Personalized Weather (thunder effect should overwrite rainy aura)
                     if(spellInfo_1->SpellIconID == 2606 && spellInfo_2->SpellIconID == 2606)
+                        return false;
+
+                    // Kindred Spirits (allow stack for auras)
+                    if (spellInfo_1->SpellIconID == 3559 && spellInfo_2->SpellIconID == 3559)
                         return false;
 
                     // Brood Affliction: Bronze
@@ -1559,6 +1570,10 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                 if ((spellInfo_1->Id == 47585 && spellInfo_2->Id == 60069) ||
                     (spellInfo_2->Id == 47585 && spellInfo_1->Id == 60069))
                     return false;
+                // Power Word: Shield and Divine Aegis
+                if ((spellInfo_1->SpellIconID == 566 && spellInfo_2->SpellIconID == 2820) ||
+                    (spellInfo_2->SpellIconID == 566 && spellInfo_1->SpellIconID == 2820))
+                    return false;
             }
             break;
         case SPELLFAMILY_DRUID:
@@ -1688,6 +1703,10 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                 // Seal of Corruption (caster/target parts stacking allow, other stacking checked by spell specs)
                 if (spellInfo_1->SpellIconID == 2292 && spellInfo_2->SpellIconID == 2292)
                     return false;
+
+                // Divine Sacrifice and Divine Guardian
+                if (spellInfo_1->SpellIconID == 3837 && spellInfo_2->SpellIconID == 3837)
+                    return false;
             }
 
             // Blessing of Sanctuary (multi-family check, some from 16 spell icon spells)
@@ -1725,6 +1744,10 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
         case SPELLFAMILY_DEATHKNIGHT:
             if (spellInfo_2->SpellFamilyName == SPELLFAMILY_DEATHKNIGHT)
             {
+                // Lichborne  and Lichborne (triggered)
+                if( spellInfo_1->SpellIconID == 61 && spellInfo_2->SpellIconID == 61 )
+                    return false;
+
                 // Frost Presence and Frost Presence (triggered)
                 if( spellInfo_1->SpellIconID == 2632 && spellInfo_2->SpellIconID == 2632 )
                     return false;
@@ -2606,14 +2629,31 @@ bool SpellMgr::IsSpellValid(SpellEntry const* spellInfo, Player* pl, bool msg)
             case SPELL_EFFECT_CREATE_ITEM:
             case SPELL_EFFECT_CREATE_ITEM_2:
             {
-                if(!ObjectMgr::GetItemPrototype( spellInfo->EffectItemType[i] ))
+                if (spellInfo->EffectItemType[i] == 0)
+                {
+                    // skip auto-loot crafting spells, its not need explicit item info (but have special fake items sometime)
+                    if (!IsLootCraftingSpell(spellInfo))
+                    {
+                        if(msg)
+                        {
+                            if(pl)
+                                ChatHandler(pl).PSendSysMessage("Craft spell %u not have create item entry.",spellInfo->Id);
+                            else
+                                sLog.outErrorDb("Craft spell %u not have create item entry.",spellInfo->Id);
+                        }
+                        return false;
+                    }
+
+                }
+                // also possible IsLootCraftingSpell case but fake item must exist anyway
+                else if (!ObjectMgr::GetItemPrototype( spellInfo->EffectItemType[i] ))
                 {
                     if(msg)
                     {
                         if(pl)
-                            ChatHandler(pl).PSendSysMessage("Craft spell %u create not-exist in DB item (Entry: %u) and then...",spellInfo->Id,spellInfo->EffectItemType[i]);
+                            ChatHandler(pl).PSendSysMessage("Craft spell %u create item (Entry: %u) but item does not exist in item_template.",spellInfo->Id,spellInfo->EffectItemType[i]);
                         else
-                            sLog.outErrorDb("Craft spell %u create not-exist in DB item (Entry: %u) and then...",spellInfo->Id,spellInfo->EffectItemType[i]);
+                            sLog.outErrorDb("Craft spell %u create item (Entry: %u) but item does not exist in item_template.",spellInfo->Id,spellInfo->EffectItemType[i]);
                     }
                     return false;
                 }
@@ -2649,9 +2689,9 @@ bool SpellMgr::IsSpellValid(SpellEntry const* spellInfo, Player* pl, bool msg)
                 if(msg)
                 {
                     if(pl)
-                        ChatHandler(pl).PSendSysMessage("Craft spell %u have not-exist reagent in DB item (Entry: %u) and then...",spellInfo->Id,spellInfo->Reagent[j]);
+                        ChatHandler(pl).PSendSysMessage("Craft spell %u requires reagent item (Entry: %u) but item does not exist in item_template.",spellInfo->Id,spellInfo->Reagent[j]);
                     else
-                        sLog.outErrorDb("Craft spell %u have not-exist reagent in DB item (Entry: %u) and then...",spellInfo->Id,spellInfo->Reagent[j]);
+                        sLog.outErrorDb("Craft spell %u requires reagent item (Entry: %u) but item does not exist in item_template.",spellInfo->Id,spellInfo->Reagent[j]);
                 }
                 return false;
             }

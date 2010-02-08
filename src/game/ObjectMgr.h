@@ -381,9 +381,9 @@ class ObjectMgr
 
         typedef UNORDERED_MAP<uint32, Item*> ItemMap;
 
-        typedef std::set< Group * > GroupSet;
+        typedef UNORDERED_MAP<uint32, Group*> GroupMap;
 
-        typedef UNORDERED_MAP<uint32, Guild *> GuildMap;
+        typedef UNORDERED_MAP<uint32, Guild*> GuildMap;
 
         typedef UNORDERED_MAP<uint32, ArenaTeam*> ArenaTeamMap;
 
@@ -408,9 +408,10 @@ class ObjectMgr
         void LoadGameobjectInfo();
         void AddGameobjectInfo(GameObjectInfo *goinfo);
 
-        Group * GetGroupByLeader(const uint64 &guid) const;
-        void AddGroup(Group* group) { mGroupSet.insert( group ); }
-        void RemoveGroup(Group* group) { mGroupSet.erase( group ); }
+        Group* GetGroupById(uint32 id) const;
+        Group* GetGroupByLeaderLowGUID(uint32 guid) const;  // slow way by leader guid
+        void AddGroup(Group* group);
+        void RemoveGroup(Group* group);
 
         Guild* GetGuildByLeader(uint64 const&guid) const;
         Guild* GetGuildById(uint32 GuildId) const;
@@ -637,8 +638,9 @@ class ObjectMgr
         void LoadTrainerSpell();
 
         std::string GeneratePetName(uint32 entry);
-        uint32 GetBaseXP(uint32 level);
-        uint32 GetXPForLevel(uint32 level);
+        uint32 GetBaseXP(uint32 level) const;
+        uint32 GetXPForLevel(uint32 level) const;
+        uint32 GetXPForPetLevel(uint32 level) const { return GetXPForLevel(level)/20; }
 
         int32 GetFishingBaseSkillLevel(uint32 entry) const
         {
@@ -654,6 +656,7 @@ class ObjectMgr
         uint32 GenerateAuctionID();
         uint64 GenerateEquipmentSetGuid();
         uint32 GenerateGuildId();
+        uint32 GenerateGroupId();
         uint32 GenerateItemTextID();
         uint32 GenerateMailID();
         uint32 GeneratePetNumber();
@@ -800,7 +803,21 @@ class ObjectMgr
         static PetNameInvalidReason CheckPetName( const std::string& name );
         static bool IsValidCharterName( const std::string& name );
 
-        static bool CheckDeclinedNames(std::wstring mainpart, DeclinedName const& names);
+		static bool CheckDeclinedNames(std::wstring w_ownname, DeclinedName const& names);
+
+        void LoadSpellDisabledEntrys();
+        uint8 IsSpellDisabled(uint32 spellid)
+        {
+            uint8 result=0;
+            SpellDisabledMap::const_iterator itr = m_spell_disabled.find(spellid);
+            if(itr != m_spell_disabled.end())
+            {
+                result=1;
+                if(itr->second != 0)
+                    result=2;
+            }
+            return result;
+        }
 
         int GetIndexForLocale(LocaleConstant loc);
         LocaleConstant GetLocaleForIndex(int i);
@@ -892,8 +909,9 @@ class ObjectMgr
         uint32 m_ItemTextId;
         uint32 m_mailid;
         uint32 m_hiPetNumber;
+        uint32 m_groupId;
 
-        // first free low guid for seelcted guid type
+        // first free low guid for selected guid type
         uint32 m_hiCharGuid;
         uint32 m_hiCreatureGuid;
         uint32 m_hiItemGuid;
@@ -908,7 +926,7 @@ class ObjectMgr
         typedef std::set<uint32> TavernAreaTriggerSet;
         typedef std::set<uint32> GameObjectForQuestSet;
 
-        GroupSet            mGroupSet;
+        GroupMap            mGroupMap;
         GuildMap            mGuildMap;
         ArenaTeamMap        mArenaTeamMap;
 
@@ -934,6 +952,9 @@ class ObjectMgr
         //character reserved names
         typedef std::set<std::wstring> ReservedNamesMap;
         ReservedNamesMap    m_ReservedNames;
+
+        typedef UNORDERED_MAP<uint32, uint32> SpellDisabledMap;
+        SpellDisabledMap  m_spell_disabled;
 
         GraveYardMap        mGraveYardMap;
 

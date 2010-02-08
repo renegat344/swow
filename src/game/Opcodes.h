@@ -367,7 +367,7 @@ enum Opcodes
     SMSG_ATTACKERSTATEUPDATE                        = 0x14A,
     SMSG_BATTLEFIELD_PORT_DENIED                    = 0x14B,
     SMSG_DAMAGE_DONE_OBSOLETE                       = 0x14C,
-    SMSG_DAMAGE_TAKEN_OBSOLETE                      = 0x14D,
+    SMSG_UNIT_SPELLCAST_START                       = 0x14D,
     SMSG_CANCEL_COMBAT                              = 0x14E,
     SMSG_SPELLBREAKLOG                              = 0x14F,
     SMSG_SPELLHEALLOG                               = 0x150,
@@ -576,7 +576,7 @@ enum Opcodes
     SMSG_GMTICKET_SYSTEMSTATUS                      = 0x21B,
     CMSG_SPIRIT_HEALER_ACTIVATE                     = 0x21C,
     CMSG_SET_STAT_CHEAT                             = 0x21D,
-    SMSG_SET_REST_START_OBSOLETE                    = 0x21E,
+    SMSG_QUEST_FORCE_REMOVE                         = 0x21E, // uint32 questid
     CMSG_SKILL_BUY_STEP                             = 0x21F,
     CMSG_SKILL_BUY_RANK                             = 0x220,
     CMSG_XP_CHEAT                                   = 0x221,
@@ -1242,7 +1242,7 @@ enum Opcodes
     SMSG_ITEM_REFUND_RESULT                         = 0x4B5, // refund item result
     CMSG_CORPSE_MAP_POSITION_QUERY                  = 0x4B6, // CMSG, uint32
     CMSG_CORPSE_MAP_POSITION_QUERY_RESPONSE         = 0x4B7, // SMSG, 3*float+float
-    CMSG_LFG_SET_ROLES_2                            = 0x4B8, // CMSG, empty, lua: SetLFGRoles
+    UMSG_UNKNOWN_1208                               = 0x4B8, // not found
     UMSG_UNKNOWN_1209                               = 0x4B9, // not found
     CMSG_CALENDAR_CONTEXT_EVENT_SIGNUP              = 0x4BA, // CMSG, uint64, lua: CalendarContextEventSignUp
     SMSG_CALENDAR_ACTION_PENDING                    = 0x4BB, // SMSG, calendar related EVENT_CALENDAR_ACTION_PENDING
@@ -1264,13 +1264,13 @@ enum Opcodes
     UMSG_UNKNOWN_1227                               = 0x4CB, // not found 3.2
     UMSG_UNKNOWN_1228                               = 0x4CC, // not found 3.2
     SMSG_UNKNOWN_1229                               = 0x4CD, // SMSG, handles any opcode
-    SMSG_UNKNOWN_1230                               = 0x4CE, // SMSG, movement related
-    CMSG_UNKNOWN_1231_ACK                           = 0x4CF, // movement related
-    SMSG_UNKNOWN_1232                               = 0x4D0, // SMSG, movement related
-    CMSG_UNKNOWN_1233_ACK                           = 0x4D1, // movement related
-    SMSG_UNKNOWN_1234                               = 0x4D2, // SMSG, movement related
-    SMSG_UNKNOWN_1235                               = 0x4D3, // SMSG, movement related
-    SMSG_UNKNOWN_1236                               = 0x4D4, // SMSG, movement related
+    SMSG_FORCE_UNK1_SPEED_CHANGE                    = 0x4CE, // SMSG, movement related
+    CMSG_FORCE_UNK1_SPEED_CHANGE_ACK                = 0x4CF, // movement related
+    SMSG_FORCE_UNK2_SPEED_CHANGE                    = 0x4D0, // SMSG, movement related
+    CMSG_FORCE_UNK2_SPEED_CHANGE_ACK                = 0x4D1, // movement related
+    MSG_MOVE_UNKNOWN_1234                           = 0x4D2, // SMSG, movement related
+    SMSG_SPLINE_MOVE_UNKNOWN_1235                   = 0x4D3, // SMSG, movement related
+    SMSG_SPLINE_MOVE_UNKNOWN_1236                   = 0x4D4, // SMSG, movement related
     CMSG_EQUIPMENT_SET_USE                          = 0x4D5, // CMSG, lua: UseEquipmentSet
     SMSG_EQUIPMENT_SET_USE_RESULT                   = 0x4D6, // SMSG, UseEquipmentSetResult?
     UMSG_UNKNOWN_1239                               = 0x4D7, // not found 3.2

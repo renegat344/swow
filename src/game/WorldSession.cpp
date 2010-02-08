@@ -567,9 +567,10 @@ void WorldSession::SendAuthWaitQue(uint32 position)
     }
     else
     {
-        WorldPacket packet( SMSG_AUTH_RESPONSE, 5 );
-        packet << uint8( AUTH_WAIT_QUEUE );
-        packet << uint32 (position);
+        WorldPacket packet( SMSG_AUTH_RESPONSE, 1+4+1 );
+        packet << uint8(AUTH_WAIT_QUEUE);
+        packet << uint32(position);
+        packet << uint8(0);                                 // unk 3.3.0
         SendPacket(&packet);
     }
 }
@@ -626,8 +627,9 @@ void WorldSession::SetAccountData(AccountDataType type, time_t time_, std::strin
 
         CharacterDatabase.BeginTransaction ();
         CharacterDatabase.PExecute("DELETE FROM account_data WHERE account='%u' AND type='%u'", acc, type);
-        CharacterDatabase.escape_string(data);
-        CharacterDatabase.PExecute("INSERT INTO account_data VALUES ('%u','%u','%u','%s')", acc, type, (uint32)time_, data.c_str());
+        std::string safe_data = data;
+        CharacterDatabase.escape_string(safe_data);
+        CharacterDatabase.PExecute("INSERT INTO account_data VALUES ('%u','%u','%u','%s')", acc, type, (uint32)time_, safe_data.c_str());
         CharacterDatabase.CommitTransaction ();
     }
     else
@@ -638,8 +640,9 @@ void WorldSession::SetAccountData(AccountDataType type, time_t time_, std::strin
 
         CharacterDatabase.BeginTransaction ();
         CharacterDatabase.PExecute("DELETE FROM character_account_data WHERE guid='%u' AND type='%u'", m_GUIDLow, type);
-        CharacterDatabase.escape_string(data);
-        CharacterDatabase.PExecute("INSERT INTO character_account_data VALUES ('%u','%u','%u','%s')", m_GUIDLow, type, (uint32)time_, data.c_str());
+        std::string safe_data = data;
+        CharacterDatabase.escape_string(safe_data);
+        CharacterDatabase.PExecute("INSERT INTO character_account_data VALUES ('%u','%u','%u','%s')", m_GUIDLow, type, (uint32)time_, safe_data.c_str());
         CharacterDatabase.CommitTransaction ();
     }
 
@@ -716,95 +719,6 @@ void WorldSession::SaveTutorialsData()
     }
 
     m_TutorialsChanged = false;
-}
-
-void WorldSession::ReadMovementInfo(WorldPacket &data, MovementInfo *mi)
-{
-    data >> mi->flags;
-    data >> mi->unk1;
-    data >> mi->time;
-    data >> mi->x;
-    data >> mi->y;
-    data >> mi->z;
-    data >> mi->o;
-
-    if(mi->HasMovementFlag(MOVEMENTFLAG_ONTRANSPORT))
-    {
-        if(!data.readPackGUID(mi->t_guid))
-            return;
-
-        data >> mi->t_x;
-        data >> mi->t_y;
-        data >> mi->t_z;
-        data >> mi->t_o;
-        data >> mi->t_time;
-        data >> mi->t_seat;
-    }
-
-    if((mi->HasMovementFlag(MovementFlags(MOVEMENTFLAG_SWIMMING | MOVEMENTFLAG_FLYING))) || (mi->unk1 & 0x20))
-    {
-        data >> mi->s_pitch;
-    }
-
-    data >> mi->fallTime;
-
-    if(mi->HasMovementFlag(MOVEMENTFLAG_JUMPING))
-    {
-        data >> mi->j_unk;
-        data >> mi->j_sinAngle;
-        data >> mi->j_cosAngle;
-        data >> mi->j_xyspeed;
-    }
-
-    if(mi->HasMovementFlag(MOVEMENTFLAG_SPLINE))
-    {
-        data >> mi->u_unk1;
-    }
-}
-
-void WorldSession::WriteMovementInfo(WorldPacket *data, MovementInfo *mi)
-{
-    data->appendPackGUID(mi->guid);
-
-    *data << mi->flags;
-    *data << mi->unk1;
-    *data << mi->time;
-    *data << mi->x;
-    *data << mi->y;
-    *data << mi->z;
-    *data << mi->o;
-
-    if(mi->HasMovementFlag(MOVEMENTFLAG_ONTRANSPORT))
-    {
-        data->appendPackGUID(mi->t_guid);
-
-        *data << mi->t_x;
-        *data << mi->t_y;
-        *data << mi->t_z;
-        *data << mi->t_o;
-        *data << mi->t_time;
-        *data << mi->t_seat;
-    }
-
-    if((mi->HasMovementFlag(MovementFlags(MOVEMENTFLAG_SWIMMING | MOVEMENTFLAG_FLYING))) || (mi->unk1 & 0x20))
-    {
-        *data << mi->s_pitch;
-    }
-
-    *data << mi->fallTime;
-
-    if(mi->HasMovementFlag(MOVEMENTFLAG_JUMPING))
-    {
-        *data << mi->j_unk;
-        *data << mi->j_sinAngle;
-        *data << mi->j_cosAngle;
-        *data << mi->j_xyspeed;
-    }
-
-    if(mi->HasMovementFlag(MOVEMENTFLAG_SPLINE))
-    {
-        *data << mi->u_unk1;
-    }
 }
 
 void WorldSession::ReadAddonsInfo(WorldPacket &data)

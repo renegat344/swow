@@ -93,61 +93,73 @@ RandomMovementGenerator<Creature>::_setRandomLocation(Creature &creature)
 
     creature.SetOrientation(creature.GetAngle(nx, ny));
     i_destinationHolder.SetDestination(traveller, nx, ny, nz);
-    creature.addUnitState(UNIT_STAT_ROAMING);
+    creature.addUnitState(UNIT_STAT_ROAMING_MOVE);
 
     if (is_air_ok)
     {
         i_nextMoveTime.Reset(i_destinationHolder.GetTotalTravelTime());
-        creature.AddMonsterMoveFlag(MONSTER_MOVE_FLY);
+        creature.AddSplineFlag(SPLINEFLAG_UNKNOWN7);
     }
     //else if (is_water_ok)                                 // Swimming mode to be done with more than this check
     else
     {
         i_nextMoveTime.Reset(urand(500+i_destinationHolder.GetTotalTravelTime(), 10000+i_destinationHolder.GetTotalTravelTime()));
-        creature.AddMonsterMoveFlag(MONSTER_MOVE_WALK);
+        creature.AddSplineFlag(SPLINEFLAG_WALKMODE);
     }
 }
 
 template<>
-void
-RandomMovementGenerator<Creature>::Initialize(Creature &creature)
+void RandomMovementGenerator<Creature>::Initialize(Creature &creature)
 {
     if (!creature.isAlive())
         return;
 
     if (creature.canFly())
-        creature.AddMonsterMoveFlag(MONSTER_MOVE_FLY);
+        creature.AddSplineFlag(SPLINEFLAG_UNKNOWN7);
     else
-        creature.AddMonsterMoveFlag(MONSTER_MOVE_WALK);
+        creature.AddSplineFlag(SPLINEFLAG_WALKMODE);
 
+    creature.addUnitState(UNIT_STAT_ROAMING|UNIT_STAT_ROAMING_MOVE);
     _setRandomLocation(creature);
 }
 
 template<>
-void
-RandomMovementGenerator<Creature>::Reset(Creature &creature)
+void RandomMovementGenerator<Creature>::Reset(Creature &creature)
 {
     Initialize(creature);
+}
+
+template<>
+void RandomMovementGenerator<Creature>::Interrupt(Creature &creature)
+{
+    creature.clearUnitState(UNIT_STAT_ROAMING|UNIT_STAT_ROAMING_MOVE);
+}
+
+template<>
+void
+RandomMovementGenerator<Creature>::Finalize(Creature &creature)
+{
+    creature.clearUnitState(UNIT_STAT_ROAMING|UNIT_STAT_ROAMING_MOVE);
 }
 
 template<>
 bool
 RandomMovementGenerator<Creature>::Update(Creature &creature, const uint32 &diff)
 {
-    if (creature.hasUnitState(UNIT_STAT_ROOT | UNIT_STAT_STUNNED | UNIT_STAT_DISTRACTED | UNIT_STAT_DIED))
+    if (creature.hasUnitState(UNIT_STAT_NOT_MOVE))
     {
         i_nextMoveTime.Update(i_nextMoveTime.GetExpiry());  // Expire the timer
-        creature.clearUnitState(UNIT_STAT_ROAMING);
+        creature.clearUnitState(UNIT_STAT_ROAMING_MOVE);
         return true;
     }
 
     i_nextMoveTime.Update(diff);
 
     if (i_destinationHolder.HasArrived() && !creature.IsStopped() && !creature.canFly())
-        creature.clearUnitState(UNIT_STAT_ROAMING);
+        creature.clearUnitState(UNIT_STAT_ROAMING_MOVE);
 
     if (!i_destinationHolder.HasArrived() && creature.IsStopped())
-        creature.addUnitState(UNIT_STAT_ROAMING);
+        creature.addUnitState(UNIT_STAT_ROAMING_MOVE);
 
     CreatureTraveller traveller(creature);
 
@@ -156,15 +168,15 @@ RandomMovementGenerator<Creature>::Update(Creature &creature, const uint32 &diff
         if (i_nextMoveTime.Passed())
         {
             if (creature.canFly())
-                creature.AddMonsterMoveFlag(MONSTER_MOVE_FLY);
+                creature.AddSplineFlag(SPLINEFLAG_UNKNOWN7);
             else
-                creature.AddMonsterMoveFlag(MONSTER_MOVE_WALK);
+                creature.AddSplineFlag(SPLINEFLAG_WALKMODE);
 
             _setRandomLocation(creature);
         }
         else if (creature.isPet() && creature.GetOwner() && !creature.IsWithinDist(creature.GetOwner(), PET_FOLLOW_DIST+2.5f))
         {
-           creature.AddMonsterMoveFlag(MONSTER_MOVE_WALK);
+           creature.AddSplineFlag(SPLINEFLAG_WALKMODE);
            _setRandomLocation(creature);
         }
     }

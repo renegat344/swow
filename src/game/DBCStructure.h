@@ -613,7 +613,7 @@ struct ChatChannelsEntry
 struct ChrClassesEntry
 {
     uint32  ClassID;                                        // 0
-                                                            // 1, unused
+    //uint32 flags;                                         // 1, unused
     uint32  powerType;                                      // 2
                                                             // 3-4, unused
     //char*       name[16];                                 // 5-20 unused
@@ -622,9 +622,9 @@ struct ChrClassesEntry
                                                             // 37 string flag, unused
     //char*       nameNeutralGender[16];                    // 38-53 unused, if different from base (male) case
                                                             // 54 string flag, unused
-                                                            // 55, unused
+                                                            // 55, unused capitalized name
     uint32  spellfamily;                                    // 56
-                                                            // 57, unused
+    //uint32 flags2;                                        // 57, unused 0x08 HasRelicSlot
     uint32  CinematicSequence;                              // 58 id from CinematicSequences.dbc
     uint32  expansion;                                      // 59 (0 - original race, 1 - tbc addon, ...)
 };
@@ -1007,7 +1007,7 @@ struct ItemExtendedCostEntry
     uint32      ID;                                         // 0 extended-cost entry id
     uint32      reqhonorpoints;                             // 1 required honor points
     uint32      reqarenapoints;                             // 2 required arena points
-    //uint32 unk1;                                          // 4 probably indicates new 2v2 bracket restrictions
+    uint32      reqarenaslot;                               // 4 arena slot restrctions (min slot value)
     uint32      reqitem[5];                                 // 5-8 required item id
     uint32      reqitemcount[5];                            // 9-13 required count of 1st item
     uint32      reqpersonalarenarating;                     // 14 required personal arena rating
@@ -1112,8 +1112,8 @@ struct MapEntry
         return !IsDungeon() ||
             MapID==209 || MapID==269 || MapID==309 ||       // TanarisInstance, CavernsOfTime, Zul'gurub
             MapID==509 || MapID==534 || MapID==560 ||       // AhnQiraj, HyjalPast, HillsbradPast
-            MapID==568 || MapID==580 || MapID==615 ||       // ZulAman, Sunwell Plateau, Obsidian Sanctrum
-            MapID==616;                                     // Eye Of Eternity
+            MapID==568 || MapID==580 || MapID==595 ||       // ZulAman, Sunwell Plateau, Culling of Stratholme
+            MapID==615 || MapID==616;                       // Obsidian Sanctum, Eye Of Eternity
     }
 
     bool IsContinent() const
@@ -1154,11 +1154,24 @@ struct PvPDifficultyEntry
     BattleGroundBracketId GetBracketId() const { return BattleGroundBracketId(bracketId); }
 };
 
+struct QuestFactionRewardEntry
+{
+    uint32      id;                                         // 0
+    int32       rewardValue[10];                            // 1-10
+};
+
 struct QuestSortEntry
 {
     uint32      id;                                         // 0        m_ID
     //char*       name[16];                                 // 1-16     m_SortName_lang
                                                             // 17 name flags
+};
+
+struct QuestXPLevel
+{
+    uint32      questLevel;                                 // 0
+    uint32      xpIndex[9];                                 // 1-9
+    //unk                                                   // 10
 };
 
 struct RandomPropertiesPointsEntry
@@ -1535,9 +1548,9 @@ struct SpellItemEnchantmentEntry
     uint32      slot;                                       // 32       m_flags
     uint32      GemID;                                      // 33       m_src_itemID
     uint32      EnchantmentCondition;                       // 34       m_condition_id
-    //uint32      requiredSkill;                            // 35       m_requiredSkillID
-    //uint32      requiredSkillValue;                       // 36       m_requiredSkillRank
-                                                            // 37       new in 3.1
+    uint32      requiredSkill;                              // 35       m_requiredSkillID
+    uint32      requiredSkillValue;                         // 36       m_requiredSkillRank
+    uint32      requiredLevel;                              // 37       m_requiredLevel
 };
 
 struct SpellItemEnchantmentConditionEntry

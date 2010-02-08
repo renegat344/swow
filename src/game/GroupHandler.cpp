@@ -189,10 +189,12 @@ void WorldSession::HandleGroupAcceptOpcode( WorldPacket & recv_data )
     // forming a new group, create it
     if(!group->IsCreated())
     {
-        if( leader )
+        if (leader)
             group->RemoveInvite(leader);
-        group->Create(group->GetLeaderGUID(), group->GetLeaderName());
-        sObjectMgr.AddGroup(group);
+        if (group->Create(group->GetLeaderGUID(), group->GetLeaderName()))
+            sObjectMgr.AddGroup(group);
+        else
+            return;
     }
 
     // everything's fine, do it, PLAYER'S GROUP IS SET IN ADDMEMBER!!!
@@ -469,7 +471,7 @@ void WorldSession::HandleRaidTargetUpdateOpcode( WorldPacket & recv_data )
 
         uint64 guid;
         recv_data >> guid;
-        group->SetTargetIcon(x, guid);
+        group->SetTargetIcon(x, _player->GetGUID(), guid);
     }
 }
 

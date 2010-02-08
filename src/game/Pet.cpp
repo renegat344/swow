@@ -38,11 +38,10 @@ char const* petTypeSuffix[MAX_PET_TYPE] =
 };
 
 Pet::Pet(PetType type) :
-Creature(), m_removed(false), m_petType(type), m_happinessTimer(7500), m_duration(0), m_resetTalentsCost(0),
+Creature(CREATURE_SUBTYPE_PET), m_removed(false), m_petType(type), m_happinessTimer(7500), m_duration(0), m_resetTalentsCost(0),
 m_bonusdamage(0), m_resetTalentsTime(0), m_usedTalentCount(0), m_auraUpdateMask(0), m_loading(false),
 m_declinedname(NULL), m_petModeFlags(PET_MODE_DEFAULT)
 {
-    m_isPet = true;
     m_name = "Pet";
     m_regenTimer = 4000;
 
@@ -293,6 +292,8 @@ bool Pet::LoadPetFromDB( Player* owner, uint32 petentry, uint32 petnumber, bool 
         SetPower(POWER_MANA, savedmana > GetMaxPower(POWER_MANA) ? GetMaxPower(POWER_MANA) : savedmana);
     }
 
+    UpdateWalkMode(owner);
+
     AIM_Initialize();
     map->Add((Creature*)this);
 
@@ -333,6 +334,10 @@ bool Pet::LoadPetFromDB( Player* owner, uint32 petentry, uint32 petnumber, bool 
             delete result;
         }
     }
+
+    //set last used pet number (for use in BG's)
+    if(owner->GetTypeId() == TYPEID_PLAYER && isControlled() && !isTemporarySummoned() && (getPetType() == SUMMON_PET || getPetType() == HUNTER_PET))
+        ((Player*)owner)->SetLastPetNumber(pet_number);
 
     m_loading = false;
 
@@ -518,8 +523,8 @@ void Pet::Update(uint32 diff)
 
             if(m_duration > 0)
             {
-                if(m_duration > diff)
-                    m_duration -= diff;
+                if(m_duration > (int32)diff)
+                    m_duration -= (int32)diff;
                 else
                 {
                     Remove(getPetType() != SUMMON_PET ? PET_SAVE_AS_DELETED:PET_SAVE_NOT_IN_SLOT);
@@ -713,7 +718,7 @@ void Pet::GivePetXP(uint32 xp)
         newXP -= nextLvlXP;
 
         GivePetLevel(level+1);
-        SetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP, sObjectMgr.GetXPForLevel(level+1)/4);
+        SetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP, sObjectMgr.GetXPForPetLevel(level+1));
 
         level = getLevel();
         nextLvlXP = GetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP);
@@ -775,7 +780,7 @@ bool Pet::CreateBaseAtCreature(Creature* creature)
     setPowerType(POWER_FOCUS);
     SetUInt32Value(UNIT_FIELD_PET_NAME_TIMESTAMP, 0);
     SetUInt32Value(UNIT_FIELD_PETEXPERIENCE, 0);
-    SetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP, sObjectMgr.GetXPForLevel(creature->getLevel())/4);
+    SetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP, sObjectMgr.GetXPForPetLevel(creature->getLevel()));
     SetUInt32Value(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_NONE);
 
     if(CreatureFamilyEntry const* cFamily = sCreatureFamilyStore.LookupEntry(cinfo->family))
@@ -920,7 +925,7 @@ bool Pet::InitStatsForLevel(uint32 petlevel, Unit* owner)
         }
         case HUNTER_PET:
         {
-            SetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP, sObjectMgr.GetXPForLevel(petlevel)/4);
+            SetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP, sObjectMgr.GetXPForPetLevel(petlevel));
             //these formula may not be correct; however, it is designed to be close to what it should be
             //this makes dps 0.5 of pets level
             SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, float(petlevel - (petlevel / 4)) );
@@ -1183,7 +1188,7 @@ void Pet::_LoadAuras(uint32 timediff)
             // prevent wrong values of remaincharges
             if(spellproto->procCharges)
             {
-                if(remaincharges <= 0 || remaincharges > spellproto->procCharges)
+                if(remaincharges <= 0 || remaincharges > (int32)spellproto->procCharges)
                     remaincharges = spellproto->procCharges;
             }
             else
@@ -1773,7 +1778,7 @@ void Pet::ToggleAutocast(uint32 spellid, bool apply)
 
     PetSpellMap::iterator itr = m_spells.find(spellid);
 
-    int i;
+    uint32 i;
 
     if(apply)
     {
@@ -1943,7 +1948,7 @@ void Pet::SynchronizeLevelWithOwner()
             if(getLevel() > owner->getLevel())
             {
                 GivePetLevel(owner->getLevel());
-                SetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP, sObjectMgr.GetXPForLevel(owner->getLevel())/4);
+                SetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP, sObjectMgr.GetXPForPetLevel(owner->getLevel()));
                 SetUInt32Value(UNIT_FIELD_PETEXPERIENCE, GetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP)-1);
             }
             break;

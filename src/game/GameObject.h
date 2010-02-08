@@ -53,7 +53,7 @@ struct GameObjectInfo
         {
             uint32 startOpen;                               //0 used client side to determine GO_ACTIVATED means open/closed
             uint32 lockId;                                  //1 -> Lock.dbc
-            uint32 autoCloseTime;                           //2 secs till autoclose = autoCloseTime / 0x10000
+            uint32 autoCloseTime;                           //2 secs till autoclose = autoCloseTime / IN_MILISECONDS (previous was 0x10000)
             uint32 noDamageImmune;                          //3 break opening whenever you recieve damage?
             uint32 openTextID;                              //4 can be used to replace castBarCaption?
             uint32 closeTextID;                             //5
@@ -64,8 +64,8 @@ struct GameObjectInfo
         {
             uint32 startOpen;                               //0
             uint32 lockId;                                  //1 -> Lock.dbc
-            uint32 autoCloseTime;                           //2 secs till autoclose = autoCloseTime / 0x10000
-            uint32 linkedTrap;                              //3
+            uint32 autoCloseTime;                           //2 secs till autoclose = autoCloseTime / IN_MILISECONDS (previous was 0x10000)
+            uint32 linkedTrapId;                            //3
             uint32 noDamageImmune;                          //4 isBattlegroundObject
             uint32 large;                                   //5
             uint32 openTextID;                              //6 can be used to replace castBarCaption?
@@ -127,7 +127,7 @@ struct GameObjectInfo
             uint32 spellId;                                 //3
             uint32 charges;                                 //4 need respawn (if > 0)
             uint32 cooldown;                                //5 time in secs
-            uint32 autoCloseTime;                           //6
+            uint32 autoCloseTime;                           //6 secs till autoclose = autoCloseTime / IN_MILISECONDS (previous was 0x10000)
             uint32 startDelay;                              //7
             uint32 serverOnly;                              //8
             uint32 stealthed;                               //9
@@ -170,7 +170,7 @@ struct GameObjectInfo
             uint32 lockId;                                  //0 -> Lock.dbc
             uint32 questId;                                 //1
             uint32 eventId;                                 //2
-            uint32 autoCloseTime;                           //3
+            uint32 autoCloseTime;                           //3 secs till autoclose = autoCloseTime / IN_MILISECONDS (previous was 0x10000)
             uint32 customAnim;                              //4
             uint32 consumable;                              //5
             uint32 cooldown;                                //6
@@ -194,7 +194,7 @@ struct GameObjectInfo
         {
             uint32 pause;                                   //0
             uint32 startOpen;                               //1
-            uint32 autoCloseTime;                           //2 secs till autoclose = autoCloseTime / 0x10000
+            uint32 autoCloseTime;                           //2 secs till autoclose = autoCloseTime / IN_MILISECONDS (previous was 0x10000)
             uint32 pause1EventID;                           //3
             uint32 pause2EventID;                           //4
         } transport;
@@ -206,7 +206,7 @@ struct GameObjectInfo
             uint32 damageMin;                               //2
             uint32 damageMax;                               //3
             uint32 damageSchool;                            //4
-            uint32 autoCloseTime;                           //5 secs till autoclose = autoCloseTime / 0x10000
+            uint32 autoCloseTime;                           //5 secs till autoclose = autoCloseTime / IN_MILISECONDS (previous was 0x10000)
             uint32 openTextID;                              //6
             uint32 closeTextID;                             //7
         } areadamage;
@@ -457,6 +457,7 @@ struct GameObjectInfo
     {
         switch(type)
         {
+            case GAMEOBJECT_TYPE_BUTTON:      return button.linkedTrapId;
             case GAMEOBJECT_TYPE_CHEST:       return chest.linkedTrapId;
             case GAMEOBJECT_TYPE_SPELL_FOCUS: return spellFocus.linkedTrapId;
             case GAMEOBJECT_TYPE_GOOBER:      return goober.linkedTrapId;
@@ -677,6 +678,7 @@ class MANGOS_DLL_SPEC GameObject : public WorldObject
         void ResetDoorOrButton();
 
 
+        void SummonLinkedTrapIfAny();
         void TriggeringLinkedGameObject( uint32 trapEntry, Unit* target);
 
         bool isVisibleForInState(Player const* u, WorldObject const* viewPoint, bool inVisibleList) const;

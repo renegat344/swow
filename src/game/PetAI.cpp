@@ -62,7 +62,6 @@ void PetAI::MoveInLineOfSight(Unit *u)
             if(m_creature->IsWithinLOSInMap(u))
             {
                 AttackStart(u);
-                u->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
             }
         }
     }
@@ -75,7 +74,6 @@ void PetAI::AttackStart(Unit *u)
 
     if(m_creature->Attack(u,true))
     {
-        m_creature->clearUnitState(UNIT_STAT_FOLLOW);
         // TMGs call CreatureRelocation which via MoveInLineOfSight can call this function
         // thus with the following clear the original TMG gets invalidated and crash, doh
         // hope it doesn't start to leak memory without this :-/
@@ -126,8 +124,7 @@ void PetAI::_stopAttack()
     }
     else
     {
-        m_creature->clearUnitState(UNIT_STAT_FOLLOW);
-        m_creature->GetMotionMaster()->Clear();
+        m_creature->GetMotionMaster()->Clear(false);
         m_creature->GetMotionMaster()->MoveIdle();
     }
     m_creature->AttackStop();
@@ -163,13 +160,13 @@ void PetAI::UpdateAI(const uint32 diff)
             // required to be stopped cases
             if (m_creature->IsStopped() && m_creature->IsNonMeleeSpellCasted(false))
             {
-                if (m_creature->hasUnitState(UNIT_STAT_FOLLOW))
+                if (m_creature->hasUnitState(UNIT_STAT_FOLLOW_MOVE))
                     m_creature->InterruptNonMeleeSpells(false);
                 else
                     return;
             }
             // not required to be stopped case
-            else if (m_creature->isAttackReady() && m_creature->canReachWithAttack(m_creature->getVictim()))
+            else if (m_creature->isAttackReady() && m_creature->IsWithinDistInMap(m_creature->getVictim(), ATTACK_DISTANCE))
             {
                 m_creature->AttackerStateUpdate(m_creature->getVictim());
 
@@ -360,6 +357,6 @@ void PetAI::AttackedBy(Unit *attacker)
 {
     //when attacked, fight back in case 1)no victim already AND 2)not set to passive AND 3)not set to stay, unless can it can reach attacker with melee attack anyway
     if(!m_creature->getVictim() && m_creature->GetCharmInfo() && !m_creature->GetCharmInfo()->HasReactState(REACT_PASSIVE) &&
-        (!m_creature->GetCharmInfo()->HasCommandState(COMMAND_STAY) || m_creature->canReachWithAttack(attacker)))
+        (!m_creature->GetCharmInfo()->HasCommandState(COMMAND_STAY) || m_creature->IsWithinDistInMap(m_creature->getVictim(), ATTACK_DISTANCE)))
         AttackStart(attacker);
 }
