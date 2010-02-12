@@ -962,7 +962,7 @@ void WorldSession::HandleSetActionButtonOpcode(WorldPacket& recv_data)
     if (!packetData)
     {
         sLog.outDetail( "MISC: Remove action from button %u", button );
-        GetPlayer()->removeActionButton(button);
+        GetPlayer()->removeActionButton(GetPlayer()->GetActiveSpec(),button);
     }
     else
     {
@@ -985,7 +985,7 @@ void WorldSession::HandleSetActionButtonOpcode(WorldPacket& recv_data)
                 sLog.outError( "MISC: Unknown action button type %u for action %u into button %u", type, action, button );
                 return;
         }
-        GetPlayer()->addActionButton(button, action, type);
+        GetPlayer()->addActionButton(GetPlayer()->m_activeSpec, button, action, type);
     }
 }
 
