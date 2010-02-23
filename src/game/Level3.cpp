@@ -696,7 +696,7 @@ bool ChatHandler::HandleReloadEventScriptsCommand(const char* arg)
     return true;
 }
 
-bool ChatHandler::HandleReloadEventAITextsCommand(const char* arg)
+bool ChatHandler::HandleReloadEventAITextsCommand(const char* /*arg*/)
 {
 
     sLog.outString( "Re-Loading Texts from `creature_ai_texts`...");
@@ -705,7 +705,7 @@ bool ChatHandler::HandleReloadEventAITextsCommand(const char* arg)
     return true;
 }
 
-bool ChatHandler::HandleReloadEventAISummonsCommand(const char* arg)
+bool ChatHandler::HandleReloadEventAISummonsCommand(const char* /*arg*/)
 {
     sLog.outString( "Re-Loading Summons from `creature_ai_summons`...");
     sEventAIMgr.LoadCreatureEventAI_Summons(true);
@@ -713,7 +713,7 @@ bool ChatHandler::HandleReloadEventAISummonsCommand(const char* arg)
     return true;
 }
 
-bool ChatHandler::HandleReloadEventAIScriptsCommand(const char* arg)
+bool ChatHandler::HandleReloadEventAIScriptsCommand(const char* /*arg*/)
 {
     sLog.outString( "Re-Loading Scripts from `creature_ai_scripts`...");
     sEventAIMgr.LoadCreatureEventAI_Scripts();
@@ -2366,7 +2366,7 @@ bool ChatHandler::HandleListItemCommand(const char* args)
                 item_guid,owner_name.c_str(),owner_guid,owner_acc,item_pos);
         } while (result->NextRow());
 
-        int64 res_count = result->GetRowCount();
+        int res_count = (int)result->GetRowCount();
 
         delete result;
 
@@ -2416,7 +2416,7 @@ bool ChatHandler::HandleListItemCommand(const char* args)
                 item_guid,item_s_name.c_str(),item_s,item_s_acc,item_r_name.c_str(),item_r,item_r_acc,item_pos);
         } while (result->NextRow());
 
-        int64 res_count = result->GetRowCount();
+        int res_count = (int)result->GetRowCount();
 
         delete result;
 
@@ -2493,7 +2493,7 @@ bool ChatHandler::HandleListItemCommand(const char* args)
             PSendSysMessage(LANG_ITEMLIST_GUILD,item_guid,guild_name.c_str(),guild_guid,item_pos);
         } while (result->NextRow());
 
-        int64 res_count = result->GetRowCount();
+        int res_count = (int)result->GetRowCount();
 
         delete result;
 
@@ -2921,7 +2921,7 @@ bool ChatHandler::HandleLookupSpellCommand(const char* args)
             if(loc < MAX_LOCALE)
             {
                 bool known = target && target->HasSpell(id);
-                bool learn = (spellInfo->Effect[0] == SPELL_EFFECT_LEARN_SPELL);
+                bool learn = (spellInfo->Effect[EFFECT_INDEX_0] == SPELL_EFFECT_LEARN_SPELL);
 
                 uint32 talentCost = GetTalentSpellCost(id);
 
@@ -2931,7 +2931,7 @@ bool ChatHandler::HandleLookupSpellCommand(const char* args)
 
                 // unit32 used to prevent interpreting uint8 as char at output
                 // find rank of learned spell for learning spell, or talent rank
-                uint32 rank = talentCost ? talentCost : sSpellMgr.GetSpellRank(learn ? spellInfo->EffectTriggerSpell[0] : id);
+                uint32 rank = talentCost ? talentCost : sSpellMgr.GetSpellRank(learn ? spellInfo->EffectTriggerSpell[EFFECT_INDEX_0] : id);
 
                 // send spell in "id - [name, rank N] [talent] [passive] [learn] [known]" format
                 std::ostringstream ss;
@@ -3606,7 +3606,7 @@ bool ChatHandler::HandleAuraCommand(const char* args)
     SpellEntry const *spellInfo = sSpellStore.LookupEntry( spellID );
     if(spellInfo)
     {
-        for(uint32 i = 0;i<3;++i)
+        for(uint32 i = 0; i < MAX_EFFECT_INDEX; ++i)
         {
             uint8 eff = spellInfo->Effect[i];
             if (eff>=TOTAL_SPELL_EFFECTS)
@@ -3615,7 +3615,7 @@ bool ChatHandler::HandleAuraCommand(const char* args)
                 eff == SPELL_EFFECT_APPLY_AURA  ||
                 eff == SPELL_EFFECT_PERSISTENT_AREA_AURA )
             {
-                Aura *Aur = CreateAura(spellInfo, i, NULL, target);
+                Aura *Aur = CreateAura(spellInfo, SpellEffectIndex(i), NULL, target);
                 target->AddAura(Aur);
             }
         }
@@ -3828,7 +3828,7 @@ bool ChatHandler::HandleNpcInfoCommand(const char* /*args*/)
     uint32 Entry = target->GetEntry();
     CreatureInfo const* cInfo = target->GetCreatureInfo();
 
-    int32 curRespawnDelay = target->GetRespawnTimeEx()-time(NULL);
+    time_t curRespawnDelay = target->GetRespawnTimeEx()-time(NULL);
     if(curRespawnDelay < 0)
         curRespawnDelay = 0;
     std::string curRespawnDelayStr = secsToTimeString(curRespawnDelay,true);
@@ -4187,7 +4187,7 @@ bool ChatHandler::HandleChangeWeather(const char* args)
         return false;
 
     //Weather is OFF
-    if (!sWorld.getConfig(CONFIG_WEATHER))
+    if (!sWorld.getConfig(CONFIG_BOOL_WEATHER))
     {
         SendSysMessage(LANG_WEATHER_DISABLED);
         SetSentErrorMessage(true);
@@ -4433,8 +4433,8 @@ bool ChatHandler::HandleResetLevelCommand(const char * args)
 
     // set starting level
     uint32 start_level = target->getClass() != CLASS_DEATH_KNIGHT
-        ? sWorld.getConfig(CONFIG_START_PLAYER_LEVEL)
-        : sWorld.getConfig(CONFIG_START_HEROIC_PLAYER_LEVEL);
+        ? sWorld.getConfig(CONFIG_UINT32_START_PLAYER_LEVEL)
+        : sWorld.getConfig(CONFIG_UINT32_START_HEROIC_PLAYER_LEVEL);
 
     target->_ApplyAllLevelScaleItemMods(false);
 
@@ -4894,7 +4894,7 @@ bool ChatHandler::HandleQuestComplete(const char* args)
     // All creature/GO slain/casted (not required, but otherwise it will display "Creature slain 0/10")
     for(uint8 i = 0; i < QUEST_OBJECTIVES_COUNT; ++i)
     {
-        uint32 creature = pQuest->ReqCreatureOrGOId[i];
+        int32 creature = pQuest->ReqCreatureOrGOId[i];
         uint32 creaturecount = pQuest->ReqCreatureOrGOCount[i];
 
         if(uint32 spell_id = pQuest->ReqSpell[i])
@@ -4911,7 +4911,7 @@ bool ChatHandler::HandleQuestComplete(const char* args)
         else if(creature < 0)
         {
             for(uint16 z = 0; z < creaturecount; ++z)
-                player->CastedCreatureOrGO(creature,0,0);
+                player->CastedCreatureOrGO(-(creature),0,0);
         }
     }
 
@@ -5974,12 +5974,16 @@ bool ChatHandler::HandleCastSelfCommand(const char* args)
     return true;
 }
 
-std::string GetTimeString(uint32 time)
+std::string GetTimeString(time_t time)
 {
-    uint16 days = time / DAY, hours = (time % DAY) / HOUR, minute = (time % HOUR) / MINUTE;
+    time_t days = time / DAY;
+    time_t hours = (time % DAY) / HOUR;
+    time_t minute = (time % HOUR) / MINUTE;
     std::ostringstream ss;
-    if(days) ss << days << "d ";
-    if(hours) ss << hours << "h ";
+    if(days)
+        ss << days << "d ";
+    if(hours)
+        ss << hours << "h ";
     ss << minute << "m";
     return ss.str();
 }
