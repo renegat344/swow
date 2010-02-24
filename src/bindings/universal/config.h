@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,16 +16,43 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef CONFIG_H
-#define CONFIG_H
-#endif
-//#define WIN32
+#ifndef SC_CONFIG_H
+#define SC_CONFIG_H
+
+#include "Platform/CompilerDefs.h"
+#include "revision.h"
+
+// Format is YYYYMMDDRR where RR is the change in the conf file
+// for that day.
+#define SD2_CONF_VERSION    2009040501
 
 #ifdef WIN32
-//#include <windows.h>
-#define MANGOS_DLL_EXPORT extern "C" __declspec(dllexport)
+  #define MANGOS_DLL_EXPORT extern "C" __declspec(dllexport)
 #elif defined( __GNUC__ )
-#define MANGOS_DLL_EXPORT extern "C"
+  #define MANGOS_DLL_EXPORT extern "C"
 #else
-#define MANGOS_DLL_EXPORT extern "C" export
+  #define MANGOS_DLL_EXPORT extern "C" export
+#endif
+
+#ifndef _VERSION
+  #define _VERSION "Revision [" REVISION_ID "] " REVISION_DATE " " REVISION_TIME
+#endif
+
+// The path to config files
+#ifndef SYSCONFDIR
+  #define SYSCONFDIR ""
+#endif
+
+#if PLATFORM == PLATFORM_WINDOWS
+  #ifdef _WIN64
+    #define _FULLVERSION _VERSION " (Win64)"
+  #else
+    #define _FULLVERSION _VERSION " (Win32)"
+  #endif
+  #define _SCRIPTDEV2_CONFIG  "scriptdev2.conf"
+#else
+  #define _FULLVERSION _VERSION " (Unix)"
+  #define _SCRIPTDEV2_CONFIG  SYSCONFDIR"scriptdev2.conf"
+#endif
+
 #endif

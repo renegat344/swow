@@ -1,125 +1,76 @@
-/*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/* Copyright (C) 2006 - 2010 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ * This program is free software licensed under GPL version 2
+ * Please see the included DOCS/LICENSE.TXT for more information */
 
-#ifndef SCRIPTMGR_H
-#define SCRIPTMGR_H
+#ifndef SC_SCRIPTMGR_H
+#define SC_SCRIPTMGR_H
 
-//Only required includes
-#include "../../game/CreatureAI.h"
-#include "../../game/Creature.h"
-#include "../../game/InstanceData.h"
+#include "Common.h"
+#include "DBCStructure.h"
 
 class Player;
 class Creature;
+class CreatureAI;
+class InstanceData;
 class Quest;
 class Item;
 class GameObject;
 class SpellCastTargets;
 class Map;
+class Unit;
+class WorldObject;
 
-#define MAX_SCRIPTS 1000
-#define MAX_INSTANCE_SCRIPTS 1000
+#define MAX_SCRIPTS         5000                            //72 bytes each (approx 351kb)
+#define VISIBLE_RANGE       (166.0f)                        //MAX visible range (size of grid)
+#define DEFAULT_TEXT        "<ScriptDev2 Text Entry Missing!>"
 
 struct Script
 {
     Script() :
         pGossipHello(NULL), pQuestAccept(NULL), pGossipSelect(NULL), pGossipSelectWithCode(NULL),
-        pQuestSelect(NULL), pQuestComplete(NULL), pNPCDialogStatus(NULL), pGODialogStatus(NULL), pChooseReward(NULL),
-        pItemHello(NULL), pGOHello(NULL), pAreaTrigger(NULL), pItemQuestAccept(NULL), pGOQuestAccept(NULL),
-        pGOChooseReward(NULL), pItemUse(NULL), pEffectDummyGameObj(NULL), pEffectDummyCreature(NULL),
-        pEffectDummyItem(NULL), GetAI(NULL)
+        pQuestSelect(NULL), pQuestComplete(NULL), pNPCDialogStatus(NULL), pGODialogStatus(NULL),
+        pChooseReward(NULL), pItemHello(NULL), pGOHello(NULL), pAreaTrigger(NULL), pItemQuestAccept(NULL),
+        pGOQuestAccept(NULL), pGOChooseReward(NULL), pItemUse(NULL),
+        pEffectDummyCreature(NULL), pEffectDummyGameObj(NULL), pEffectDummyItem(NULL),
+        GetAI(NULL), GetInstanceData(NULL)
     {}
 
     std::string Name;
 
-    // -- Quest/gossip Methods to be scripted --
-    bool (*pGossipHello         )(Player *player, Creature *_Creature);
-    bool (*pQuestAccept         )(Player *player, Creature *_Creature, Quest const*_Quest );
-    bool (*pGossipSelect        )(Player *player, Creature *_Creature, uint32 sender, uint32 action );
-    bool (*pGossipSelectWithCode)(Player *player, Creature *_Creature, uint32 sender, uint32 action, const char* sCode );
-    bool (*pQuestSelect         )(Player *player, Creature *_Creature, Quest const*_Quest );
-    bool (*pQuestComplete       )(Player *player, Creature *_Creature, Quest const*_Quest );
-    uint32 (*pNPCDialogStatus   )(Player *player, Creature *_Creature );
-    uint32 (*pGODialogStatus    )(Player *player, GameObject * _GO );
-    bool (*pChooseReward        )(Player *player, Creature *_Creature, Quest const*_Quest, uint32 opt );
-    bool (*pItemHello           )(Player *player, Item *_Item, Quest const*_Quest );
-    bool (*pGOHello             )(Player *player, GameObject *_GO );
-    bool (*pAreaTrigger         )(Player *player, AreaTriggerEntry* at);
-    bool (*pItemQuestAccept     )(Player *player, Item *_Item, Quest const*_Quest );
-    bool (*pGOQuestAccept       )(Player *player, GameObject *_GO, Quest const*_Quest );
-    bool (*pGOChooseReward      )(Player *player, GameObject *_GO, Quest const*_Quest, uint32 opt );
-    bool (*pItemUse             )(Player *player, Item* _Item, SpellCastTargets const& targets);
-    bool (*pEffectDummyGameObj  )(Unit*, uint32, SpellEffectIndex, GameObject* );
-    bool (*pEffectDummyCreature )(Unit*, uint32, SpellEffectIndex, Creature* );
-    bool (*pEffectDummyItem     )(Unit*, uint32, SpellEffectIndex, Item* );
+    //Methods to be scripted
+    bool (*pGossipHello         )(Player*, Creature*);
+    bool (*pQuestAccept         )(Player*, Creature*, const Quest*);
+    bool (*pGossipSelect        )(Player*, Creature*, uint32, uint32);
+    bool (*pGossipSelectWithCode)(Player*, Creature*, uint32, uint32, const char*);
+    bool (*pQuestSelect         )(Player*, Creature*, const Quest*);
+    bool (*pQuestComplete       )(Player*, Creature*, const Quest*);
+    uint32 (*pNPCDialogStatus   )(Player*, Creature*);
+    uint32 (*pGODialogStatus    )(Player*, GameObject*);
+    bool (*pChooseReward        )(Player*, Creature*, const Quest*, uint32);
+    bool (*pItemHello           )(Player*, Item*, const Quest*);
+    bool (*pGOHello             )(Player*, GameObject*);
+    bool (*pAreaTrigger         )(Player*, AreaTriggerEntry*);
+    bool (*pItemQuestAccept     )(Player*, Item*, const Quest*);
+    bool (*pGOQuestAccept       )(Player*, GameObject*, const Quest*);
+    bool (*pGOChooseReward      )(Player*, GameObject*, const Quest*, uint32);
+    bool (*pItemUse             )(Player*, Item*, SpellCastTargets const&);
+    bool (*pEffectDummyCreature )(Unit*, uint32, SpellEffectIndex, Creature*);
+    bool (*pEffectDummyGameObj  )(Unit*, uint32, SpellEffectIndex, GameObject*);
+    bool (*pEffectDummyItem     )(Unit*, uint32, SpellEffectIndex, Item*);
 
-    CreatureAI* (*GetAI)(Creature *_Creature);
+    CreatureAI* (*GetAI)(Creature*);
     InstanceData* (*GetInstanceData)(Map*);
-    // -----------------------------------------
 
-    void registerSelf();
+    void RegisterSelf();
 };
 
-#define VISIBLE_RANGE (50.0f)
+//Generic scripting text function
+void DoScriptText(int32 textEntry, WorldObject* pSource, Unit* target = NULL);
 
-// Read function descriptions in CreatureAI
-struct MANGOS_DLL_DECL ScriptedAI : public CreatureAI
-{
-    explicit ScriptedAI(Creature* creature) : CreatureAI(creature) {}
-    ~ScriptedAI() {}
-
-    // Called at stopping attack by any attacker
-    void EnterEvadeMode();
-
-    // Is unit visible for MoveInLineOfSight
-    bool IsVisible(Unit* who) const
-    {
-        return !who->HasStealthAura() && m_creature->IsWithinDist(who,VISIBLE_RANGE);
-    }
-
-    // Called at World update tick
-    void UpdateAI(const uint32);
-
-    //= Some useful helpers =========================
-
-    // Start attack of victim and go to him
-    void DoStartAttack(Unit* victim);
-
-    // Stop attack of current victim
-    void DoStopAttack();
-
-    // Cast spell
-    void DoCast(Unit* victim, uint32 spelId)
-    {
-        m_creature->CastSpell(victim,spelId,true);
-    }
-
-    void DoCastSpell(Unit* who,SpellEntry *spellInfo)
-    {
-        m_creature->CastSpell(who,spellInfo,true);
-    }
-
-    void DoSay(int32 text_id, uint32 language)
-    {
-        m_creature->Say(text_id,language,0);
-    }
-
-    void DoGoHome();
-};
+#if COMPILER == COMPILER_GNU
+#define FUNC_PTR(name,callconvention,returntype,parameters)    typedef returntype(*name)parameters __attribute__ ((callconvention));
+#else
+#define FUNC_PTR(name, callconvention, returntype, parameters)    typedef returntype(callconvention *name)parameters;
+#endif
 
 #endif
