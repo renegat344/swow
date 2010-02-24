@@ -13,10 +13,10 @@
 # TODO: create m4 directory and put the checks there, because this file got realy poluted ( by Derex )
 
 ## Prelude, basic settings for Autoconf
-#  PACKAGE:            mangos
-#  VERSION:            0.16.0 (trunk)
+#  PACKAGE:            swowcore
+#  VERSION:            0.16.2 (trunk)
 #  BUG-REPORT-ADDRESS: mangos-devs@lists.sourceforge.net
-AC_INIT( [mangos], [0.16.0], [mangos-devs@lists.sourceforge.net])
+AC_INIT( [swowcore], [0.16.2], [mangos-devs@lists.sourceforge.net])
 AC_CONFIG_SRCDIR([src/shared/Common.h])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -298,6 +298,10 @@ AC_CONFIG_FILES([
    src/mangosd/mangosd.conf.dist
    src/bindings/Makefile
    src/bindings/universal/Makefile
+   src/bindings/universal/scriptdev2.conf.dist
+   src/bindings/universal/config.h
+   src/bindings/universal/sql/Makefile
+   src/bindings/universal/sql/Updates/Makefile
 ])
 
 ## Configure ACE, if needed

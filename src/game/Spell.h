@@ -108,7 +108,7 @@ class SpellCastTargets
         SpellCastTargets();
         ~SpellCastTargets();
 
-        bool read ( WorldPacket * data, Unit *caster );
+        bool read ( WorldPacket * data, Unit *caster, SpellEntry const* spell = NULL );
         void write ( WorldPacket * data );
 
         SpellCastTargets& operator=(const SpellCastTargets &target)
@@ -323,6 +323,8 @@ class Spell
         void EffectActivateRune(SpellEffectIndex eff_idx);
         void EffectTitanGrip(SpellEffectIndex eff_idx);
         void EffectEnchantItemPrismatic(SpellEffectIndex eff_idx);
+        void EffectSummonVehicle(SpellEffectIndex eff_idx);
+        void EffectDamageBuilding(SpellEffectIndex eff_idx);
         void EffectPlayMusic(SpellEffectIndex eff_idx);
         void EffectSpecCount(SpellEffectIndex eff_idx);
         void EffectActivateSpec(SpellEffectIndex eff_idx);
