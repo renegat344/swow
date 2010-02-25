@@ -1100,6 +1100,112 @@ bool GOHello_go_acherus_soul_prison(Player* pPlayer, GameObject* pGo)
     return false;
 }
 
+/*######
+## npc_eye_of_acherus
+######*/
+
+struct MANGOS_DLL_DECL npc_eye_of_acherusAI : public ScriptedAI
+{
+    npc_eye_of_acherusAI(Creature *pCreature) : ScriptedAI(pCreature)
+    {
+        m_creature->SetActiveObjectState(true);
+        Reset();
+    }
+
+    uint64 EyeGuid;
+    uint32 StartTimer;
+    bool Active;
+
+    void Reset()
+    {
+        EyeGuid = 0;
+        StartTimer = 2000;
+        Active = false;
+    }
+
+   void JustDied(Unit*u)
+   {
+        if(m_creature->GetCharmer()->GetTypeId()!= TYPEID_PLAYER)return;
+        Player* pl = ((Player*)m_creature->GetCharmer());
+
+            m_creature->GetMap()->CreatureRelocation(m_creature, 2325.0f, -5660.0f, 427.0f, 3.83f);
+            pl->RemoveAurasDueToSpell(51852);
+            pl->InterruptSpell(CURRENT_CHANNELED_SPELL);
+            pl->SetClientControl(m_creature, 0);
+            pl->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
+            pl->SetCharm(NULL);
+            pl->SetFarSightGUID(0);
+            pl->SetMover(NULL);
+            pl->RemovePetActionBar();
+            m_creature->SetCharmerGUID(0);
+   }
+
+    void AttackStart(Unit *)
+    {
+        m_creature->AttackStop();
+        m_creature->SetInCombatState(false)    ;
+    }
+
+    void MovementInform(uint32 uiType, uint32 uiPointId)
+    {
+        if (uiType != POINT_MOTION_TYPE)
+            return;
+
+        if (uiPointId == 0)
+        {
+        Unit *Eye1 = Unit::GetUnit((*m_creature), m_creature->GetGUID());
+        if (Eye1)
+            {
+            char * text1 = "The Eye of Acherus is in your control";
+            Eye1->MonsterTextEmote(text1, Eye1->GetGUID(), true);
+            //m_creature->RemoveMonsterMoveFlag(MONSTER_MOVE_SPLINE_FLY);
+            m_creature->SetSpeedRate(MOVE_FLIGHT, 2.8f, true);
+            m_creature->CastSpell(m_creature, 51890, true);
+            }
+        }
+
+    }
+
+    void UpdateAI(const uint32 uiDiff)
+    {
+        if (StartTimer < uiDiff && !Active)
+        {
+            EyeGuid = m_creature->GetGUID();
+            Unit *Eye = Unit::GetUnit((*m_creature), EyeGuid);
+            if (Eye)
+            {
+                char * text = "The Eye of Acherus launches towards its destination";
+                Eye->MonsterTextEmote(text, Eye->GetGUID(), true);
+                //m_creature->SetMonsterMoveFlags(MONSTER_MOVE_SPLINE_FLY);
+                m_creature->SetSpeedRate(MOVE_FLIGHT, 6.8f, true);
+                m_creature->SetSpeedRate(MOVE_WALK, 6.8f, true);
+                m_creature->GetMotionMaster()->MovePoint(0, 1711.0f, -5820.0f, 147.0f);
+                Active = true;
+            }
+        }
+       else StartTimer -= uiDiff;
+
+       DoMeleeAttackIfReady();
+    }
+};
+
+CreatureAI* GetAI_npc_eye_of_acherus(Creature* pCreature)
+{
+    return new npc_eye_of_acherusAI(pCreature);
+}
+
+/*######
+## go_eye_of_acherus
+######*/
+
+bool GOHello_go_eye_of_acherus(Player *player, GameObject* _GO)
+{
+    if (player->GetQuestStatus(12641) == QUEST_STATUS_INCOMPLETE)
+     player->CastSpell(player, 51852, true);
+
+    return true;
+}
+
 void AddSC_ebon_hold()
 {
     Script *newscript;
@@ -1135,5 +1241,15 @@ void AddSC_ebon_hold()
     newscript = new Script;
     newscript->Name = "go_acherus_soul_prison";
     newscript->pGOHello = &GOHello_go_acherus_soul_prison;
+    newscript->RegisterSelf();
+
+    newscript = new Script;
+    newscript->Name = "npc_eye_of_acherus";
+    newscript->GetAI = &GetAI_npc_eye_of_acherus;
+    newscript->RegisterSelf();
+
+    newscript = new Script;
+    newscript->Name = "go_eye_of_acherus";
+    newscript->pGOHello = &GOHello_go_eye_of_acherus;
     newscript->RegisterSelf();
 }

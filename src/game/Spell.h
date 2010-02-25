@@ -217,6 +217,7 @@ class Spell
     friend void Unit::SetCurrentCastedSpell( Spell * pSpell );
     public:
 
+        void EffectSummonPosessed(SpellEffectIndex eff_idx);
         void EffectNULL(SpellEffectIndex eff_idx);
         void EffectUnused(SpellEffectIndex eff_idx);
         void EffectDistract(SpellEffectIndex eff_idx);
@@ -370,7 +371,6 @@ class Spell
         void DoSummon(SpellEffectIndex eff_idx);
         void DoSummonWild(SpellEffectIndex eff_idx, uint32 forceFaction = 0);
         void DoSummonGuardian(SpellEffectIndex eff_idx, uint32 forceFaction = 0);
-        void DoSummonPosessed(SpellEffectIndex eff_idx);
         void DoSummonTotem(SpellEffectIndex eff_idx, uint8 slot = 0);
         void DoSummonCritter(SpellEffectIndex eff_idx, uint32 forceFaction = 0);
 
